@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Attendance Tracker</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Face Attendance Tracker</h1>
+            <nav>
+                <button class="nav-btn active" data-tab="attendance">Attendance</button>
+                <button class="nav-btn" data-tab="register">Register</button>
+                <button class="nav-btn" data-tab="users">Users</button>
+                <button class="nav-btn" data-tab="logs">Logs</button>
+            </nav>
+        </header>
+
+        <main>
+            <section id="attendance" class="tab-content active">
+                <div class="attendance-container">
+                    <div class="video-wrapper">
+                        <video id="video" autoplay muted playsinline></video>
+                        <canvas id="overlay"></canvas>
+                        <div class="status-badge" id="status-badge">Loading...</div>
+                    </div>
+                    <div class="attendance-info">
+                        <h2 id="detected-name">Waiting for face...</h2>
+                        <p id="detected-status"></p>
+                        <div id="today-stats">
+                            <h3>Today's Attendance</h3>
+                            <div class="stats-grid" id="stats-grid"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="register" class="tab-content">
+                <div class="register-container">
+                    <div class="capture-section">
+                        <div class="video-wrapper small">
+                            <video id="register-video" autoplay muted playsinline></video>
+                            <canvas id="register-overlay"></canvas>
+                        </div>
+                        <button id="capture-btn" class="btn btn-primary" disabled>Capture Face</button>
+                        <button id="retake-btn" class="btn btn-secondary hidden">Retake</button>
+                    </div>
+                    <div class="form-section">
+                        <form id="register-form" class="hidden">
+                            <div class="form-group">
+                                <label for="employee-id">Employee ID</label>
+                                <input type="text" id="employee-id" required placeholder="e.g., EMP001">
+                            </div>
+                            <div class="form-group">
+                                <label for="employee-name">Full Name</label>
+                                <input type="text" id="employee-name" required placeholder="e.g., John Smith">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Register Employee</button>
+                        </form>
+                        <div id="capture-preview" class="preview-section hidden">
+                            <img id="captured-image" alt="Captured face">
+                            <p>Face captured! Fill in details to register.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="users" class="tab-content">
+                <div class="users-header">
+                    <h2>Registered Users</h2>
+                    <span id="user-count">0 users</span>
+                </div>
+                <div class="users-grid" id="users-grid">
+                    <p class="empty-state">No users registered yet. Go to Register tab to add users.</p>
+                </div>
+            </section>
+
+            <section id="logs" class="tab-content">
+                <div class="logs-header">
+                    <h2>Attendance Logs</h2>
+                    <div class="logs-filters">
+                        <input type="date" id="log-date-filter">
+                        <select id="log-user-filter">
+                            <option value="">All Users</option>
+                        </select>
+                        <button id="export-btn" class="btn btn-small">Export CSV</button>
+                    </div>
+                </div>
+                <div class="logs-table-wrapper">
+                    <table id="logs-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Employee</th>
+                                <th>Check-In</th>
+                                <th>Check-Out</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-tbody">
+                            <tr>
+                                <td colspan="5" class="empty-state">No attendance records found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p id="model-status">Loading AI models...</p>
+        </footer>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="js/db.js"></script>
+    <script src="js/face.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
