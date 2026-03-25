@@ -46,13 +46,13 @@ const App = {
     const isLoggedIn = !!this.user;
     const isAdmin = this.user?.isAdmin;
     document.body.classList.toggle('is-admin', isAdmin);
-    document.getElementById('login-btn').classList.toggle('hidden', isLoggedIn);
+    document.querySelector('.login-buttons')?.classList.toggle('hidden', isLoggedIn);
     document.getElementById('logout-btn').classList.toggle('hidden', !isLoggedIn);
     document.getElementById('user-info').classList.toggle('hidden', !isLoggedIn);
     
     if (isLoggedIn) {
       document.getElementById('user-avatar').src = this.user.avatar || '';
-      document.getElementById('user-name').textContent = this.user.name || this.user.email;
+      document.getElementById('user-name').textContent = this.user.name || this.user.email || this.user.username;
       document.getElementById('admin-badge').classList.toggle('hidden', !isAdmin);
     }
   },
@@ -82,8 +82,12 @@ const App = {
       });
     });
 
-    document.getElementById('login-btn').addEventListener('click', () => {
+    document.getElementById('login-google')?.addEventListener('click', () => {
       window.location.href = 'http://localhost:3000/auth/google';
+    });
+
+    document.getElementById('login-github')?.addEventListener('click', () => {
+      window.location.href = 'http://localhost:3000/auth/github';
     });
 
     document.getElementById('logout-btn').addEventListener('click', async () => {

@@ -93,15 +93,21 @@ body {
 .btn-primary { background: var(--primary); color: white; }
 .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
 
-#login-btn {
+.login-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-login {
   background: #fff;
   color: var(--text);
   border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  padding: 6px 14px;
 }
-#login-btn:hover { background: var(--bg); }
+
+.btn-login:hover { background: var(--bg); }
+
+.btn-login svg { flex-shrink: 0; }
 .btn-ghost { background: transparent; color: var(--text-secondary); }
 .btn-ghost:hover:not(:disabled) { background: var(--bg); color: var(--text); }
 .btn-full { width: 100%; }
