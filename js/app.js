@@ -52,7 +52,7 @@ const App = {
     
     if (isLoggedIn) {
       document.getElementById('user-avatar').src = this.user.avatar || '';
-      document.getElementById('user-name').textContent = this.user.username;
+      document.getElementById('user-name').textContent = this.user.name || this.user.email;
       document.getElementById('admin-badge').classList.toggle('hidden', !isAdmin);
     }
   },
@@ -83,7 +83,7 @@ const App = {
     });
 
     document.getElementById('login-btn').addEventListener('click', () => {
-      window.location.href = 'http://localhost:3000/auth/github';
+      window.location.href = 'http://localhost:3000/auth/google';
     });
 
     document.getElementById('logout-btn').addEventListener('click', async () => {
