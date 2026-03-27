@@ -191,21 +191,32 @@ const App = {
 
     document.getElementById('capture-btn').addEventListener('click', async () => {
       try {
+        if (!this.registerVideo || !this.registerVideo.srcObject) throw new Error('Camera stream not active');
+
         this.capturedDescriptor = await FaceAPI.captureFaceDescriptor(this.registerVideo);
-        this.captureCanvas.width = this.registerVideo.videoWidth;
-        this.captureCanvas.height = this.registerVideo.videoHeight;
-        this.captureCanvas.getContext('2d').drawImage(this.registerVideo, 0, 0);
-        this.capturedImageData = this.captureCanvas.toDataURL('image/jpeg');
-        
+
+        const width = this.registerVideo.videoWidth || this.registerVideo.clientWidth || 320;
+        const height = this.registerVideo.videoHeight || this.registerVideo.clientHeight || 240;
+        if (!width || !height) throw new Error('Could not determine video dimensions');
+
+        this.captureCanvas.width = width;
+        this.captureCanvas.height = height;
+        this.captureCanvas.getContext('2d').drawImage(this.registerVideo, 0, 0, width, height);
+        this.capturedImageData = this.captureCanvas.toDataURL('image/jpeg', 0.9);
+
         document.getElementById('captured-image').src = this.capturedImageData;
         document.getElementById('capture-preview').classList.remove('hidden');
         document.getElementById('capture-btn').classList.add('hidden');
         document.getElementById('retake-btn').classList.remove('hidden');
-        
+
         if (this.registerVideo.srcObject) this.registerVideo.srcObject.getTracks().forEach(t => t.stop());
         clearInterval(this.registerDetectionInterval);
         FaceAPI.clearCanvas(this.registerOverlay);
-      } catch (e) { this.showToast(e.message, 'error'); }
+        this.showToast('Image captured successfully', 'success');
+      } catch (e) {
+        console.error('Capture error:', e);
+        this.showToast(e.message || 'Capture failed', 'error');
+      }
     });
 
     document.getElementById('retake-btn').addEventListener('click', () => {
@@ -244,10 +255,19 @@ const App = {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240, facingMode: 'user' } });
       this.registerVideo.srcObject = stream;
       await this.registerVideo.play();
-      this.registerOverlay.width = this.registerVideo.videoWidth;
-      this.registerOverlay.height = this.registerVideo.videoHeight;
+
+      document.getElementById('capture-btn').disabled = true;
+      document.getElementById('capture-btn').classList.remove('hidden');
+      document.getElementById('retake-btn').classList.add('hidden');
+      document.getElementById('capture-preview').classList.add('hidden');
+
+      this.registerOverlay.width = this.registerVideo.videoWidth || this.registerVideo.clientWidth;
+      this.registerOverlay.height = this.registerVideo.videoHeight || this.registerVideo.clientHeight;
       this.startRegisterDetection();
-    } catch (e) { this.showToast('Camera access denied', 'error'); }
+    } catch (e) {
+      console.error('startRegisterCamera error:', e);
+      this.showToast('Camera access denied or not available', 'error');
+    }
   },
 
   startRegisterDetection() {
