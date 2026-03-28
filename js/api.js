@@ -4,6 +4,7 @@ const API = {
   },
 
   async request(endpoint, options = {}) {
+    console.log(this.baseUrl, endpoint, options);
     const res = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       credentials: 'include',
