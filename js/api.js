@@ -43,5 +43,19 @@ const API = {
 
   async exportAttendance() {
     return this.request('/api/attendance/export');
+  },
+
+  async localLogin(username, password) {
+    return this.request('/auth/local/login', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
+  },
+
+  async localRegister(username, password) {
+    return this.request('/auth/local/register', {
+      method: 'POST',
+      body: JSON.stringify({ username, password })
+    });
   }
 };

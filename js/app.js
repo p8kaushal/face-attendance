@@ -46,13 +46,14 @@ const App = {
     const isLoggedIn = !!this.user;
     const isAdmin = this.user?.isAdmin;
     document.body.classList.toggle('is-admin', isAdmin);
-    document.querySelector('.login-buttons')?.classList.toggle('hidden', isLoggedIn);
+    document.getElementById('login-btn').classList.toggle('hidden', isLoggedIn);
     document.getElementById('logout-btn').classList.toggle('hidden', !isLoggedIn);
     document.getElementById('user-info').classList.toggle('hidden', !isLoggedIn);
     
     if (isLoggedIn) {
       document.getElementById('user-avatar').src = this.user.avatar || '';
-      document.getElementById('user-name').textContent = this.user.name || this.user.email || this.user.username;
+      document.getElementById('user-avatar').style.display = this.user.avatar ? 'block' : 'none';
+      document.getElementById('user-name').textContent = this.user.username || this.user.name || this.user.email;
       document.getElementById('admin-badge').classList.toggle('hidden', !isAdmin);
     }
   },
@@ -82,11 +83,11 @@ const App = {
       });
     });
 
+    document.getElementById('login-btn').addEventListener('click', () => this.showLoginModal());
     document.getElementById('login-google')?.addEventListener('click', () => {
       const baseUrl = API.baseUrl || (typeof window !== 'undefined' ? window.API_URL : '');
       window.location.href = `${baseUrl}/auth/google`;
     });
-
     document.getElementById('login-github')?.addEventListener('click', () => {
       const baseUrl = API.baseUrl || (typeof window !== 'undefined' ? window.API_URL : '');
       window.location.href = `${baseUrl}/auth/github`;
@@ -98,6 +99,71 @@ const App = {
       this.updateAuthUI();
       this.showToast('Logged out');
     });
+
+    this.setupLoginModal();
+  },
+
+  setupLoginModal() {
+    const modal = document.getElementById('login-modal');
+    const backdrop = modal.querySelector('.modal-backdrop');
+    const closeBtn = modal.querySelector('.modal-close');
+    const tabs = modal.querySelectorAll('.modal-tab');
+    const loginForm = document.getElementById('local-login-form');
+    const registerForm = document.getElementById('local-register-form');
+
+    const closeModal = () => modal.classList.add('hidden');
+    backdrop.addEventListener('click', closeModal);
+    closeBtn.addEventListener('click', closeModal);
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        if (tab.dataset.form === 'login') {
+          loginForm.classList.remove('hidden');
+          registerForm.classList.add('hidden');
+        } else {
+          loginForm.classList.add('hidden');
+          registerForm.classList.remove('hidden');
+        }
+      });
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const username = document.getElementById('login-username').value;
+        const password = document.getElementById('login-password').value;
+        const user = await API.localLogin(username, password);
+        this.user = user;
+        this.updateAuthUI();
+        closeModal();
+        this.showToast('Welcome, ' + user.username, 'success');
+      } catch (err) {
+        this.showToast(err.message, 'error');
+      }
+    });
+
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        const username = document.getElementById('register-username').value;
+        const password = document.getElementById('register-password').value;
+        const confirm = document.getElementById('register-confirm').value;
+        if (password !== confirm) throw new Error('Passwords do not match');
+        const user = await API.localRegister(username, password);
+        this.user = user;
+        this.updateAuthUI();
+        closeModal();
+        this.showToast('Account created!', 'success');
+      } catch (err) {
+        this.showToast(err.message, 'error');
+      }
+    });
+  },
+
+  showLoginModal() {
+    document.getElementById('login-modal').classList.remove('hidden');
   },
 
   async startAttendanceCamera() {
