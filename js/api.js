@@ -1,5 +1,7 @@
 const API = {
-  baseUrl: (typeof window !== 'undefined' && window.API_URL) ? window.API_URL.replace(/\/+$/,'') : '',
+  get baseUrl() {
+    return (typeof window !== 'undefined' && window.API_URL) ? window.API_URL.replace(/\/+$/,'') : 'http://localhost:3000';
+  },
 
   async request(endpoint, options = {}) {
     const res = await fetch(`${this.baseUrl}${endpoint}`, {
