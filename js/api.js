@@ -1,6 +1,7 @@
 const API = {
   get baseUrl() {
-    return (typeof window !== 'undefined' && window.API_URL) ? window.API_URL.replace(/\/+$/,'') : 'http://localhost:3000';
+      const API_URL = 'https://att.konsoftech.in';
+    return (typeof window !== 'undefined' && window.API_URL) ? window.API_URL.replace(/\/+$/,'') : API_URL;
   },
 
   async request(endpoint, options = {}) {
