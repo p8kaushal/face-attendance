@@ -15,6 +15,7 @@ const App = {
   capturedImageData: null,
 
   async init() {
+    console.log('Initializing app...');
     this.video = document.getElementById('video');
     this.registerVideo = document.getElementById('register-video');
     this.overlay = document.getElementById('overlay');
@@ -73,14 +74,50 @@ const App = {
   },
 
   setupNavigation() {
+    const menuToggle = document.querySelector('.menu-toggle');
+    const navLinks = document.querySelector('.nav-links');
+
+    const closeMenu = () => {
+      if (!menuToggle || !navLinks) return;
+      menuToggle.classList.remove('active');
+      navLinks.classList.remove('show');
+      menuToggle.setAttribute('aria-expanded', 'false');
+    };
+
+    menuToggle?.addEventListener('click', (e) => {
+      if (!navLinks) return;
+      e.stopPropagation();
+      const isOpen = menuToggle.classList.toggle('active');
+      navLinks.classList.toggle('show', isOpen);
+      menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+
+    const handleNavClick = (btn) => {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+      closeMenu();
+      if (btn.dataset.tab === 'attendance') this.startAttendanceCamera();
+    };
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 768) {
+        closeMenu();
+      }
+    });
+
     document.querySelectorAll('.nav-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(btn.dataset.tab).classList.add('active');
-        if (btn.dataset.tab === 'attendance') this.startAttendanceCamera();
-      });
+      btn.addEventListener('click', () => handleNavClick(btn));
+    });
+
+    document.addEventListener('click', (e) => {
+      if (navLinks && navLinks.classList.contains('show')) {
+        if (!navLinks.contains(e.target) && !menuToggle?.contains(e.target)) {
+          menuToggle?.classList.remove('active');
+          navLinks.classList.remove('show');
+        }
+      }
     });
 
     document.getElementById('login-btn').addEventListener('click', () => this.showLoginModal());
@@ -111,7 +148,10 @@ const App = {
     const loginForm = document.getElementById('local-login-form');
     const registerForm = document.getElementById('local-register-form');
 
-    const closeModal = () => modal.classList.add('hidden');
+    const closeModal = () => {
+      modal.classList.remove('show');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    };
     backdrop.addEventListener('click', closeModal);
     closeBtn.addEventListener('click', closeModal);
 
@@ -139,6 +179,7 @@ const App = {
         this.updateAuthUI();
         closeModal();
         this.showToast('Welcome, ' + user.username, 'success');
+        await this.loadData();
       } catch (err) {
         this.showToast(err.message, 'error');
       }
@@ -156,6 +197,7 @@ const App = {
         this.updateAuthUI();
         closeModal();
         this.showToast('Account created!', 'success');
+        await this.loadData();
       } catch (err) {
         this.showToast(err.message, 'error');
       }
@@ -163,7 +205,9 @@ const App = {
   },
 
   showLoginModal() {
-    document.getElementById('login-modal').classList.remove('hidden');
+    const modal = document.getElementById('login-modal');
+    modal.classList.remove('hidden');
+    setTimeout(() => modal.classList.add('show'), 10);
   },
 
   async startAttendanceCamera() {
@@ -435,11 +479,28 @@ const App = {
     } catch (e) { this.showToast('Export failed', 'error'); }
   },
 
+  navigateTo(tab) {
+    const btn = document.querySelector(`.nav-btn[data-tab="${tab}"]`);
+    if (btn) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tab).classList.add('active');
+      if (tab === 'attendance') this.startAttendanceCamera();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  },
+
   showToast(message, type = '') {
     const toast = document.getElementById('toast');
     toast.textContent = message;
     toast.className = 'toast ' + type;
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+    toast.classList.remove('hidden');
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.classList.add('hidden'), 300);
+    }, 3000);
   }
 };
 

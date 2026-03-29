@@ -12,8 +12,13 @@
 <body>
   <div id="app">
     <nav class="navbar">
-      <div class="logo">FaceTrack</div>
-      <div class="nav-links">
+      <a href="#" class="logo" onclick="App.navigateTo('attendance'); return false;">FaceTrack</a>
+      <button class="menu-toggle" aria-label="Menu" aria-controls="nav-links" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
         <button class="nav-btn active" data-tab="attendance">Attendance</button>
         <button class="nav-btn admin-only" data-tab="register">Register</button>
         <button class="nav-btn admin-only" data-tab="users">Users</button>
@@ -25,7 +30,7 @@
           <span id="user-name"></span>
           <span id="admin-badge" class="hidden">Admin</span>
         </div>
-        <button id="login-btn" class="btn btn-primary">Login</button>
+        <button id="login-btn" class="btn btn-primary"><span>Login</span></button>
         <button id="logout-btn" class="btn btn-ghost hidden">Logout</button>
       </div>
     </nav>
