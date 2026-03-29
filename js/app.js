@@ -167,7 +167,7 @@ const App = {
   },
 
   async startAttendanceCamera() {
-    if (!this.user) return;
+    // if (!this.user) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480, facingMode: 'user' } });
       this.video.srcObject = stream;
