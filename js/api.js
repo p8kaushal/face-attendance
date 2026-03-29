@@ -1,7 +1,7 @@
 const API = {
   get baseUrl() {
-      // const API_URL = 'https://att.konsoftech.in';
-      const API_URL = 'http://localhost:3000';
+      const API_URL = 'https://att.konsoftech.in';
+      // const API_URL = 'http://localhost:3000';
     return (typeof window !== 'undefined' && window.API_URL) ? window.API_URL.replace(/\/+$/,'') : API_URL;
   },
 
