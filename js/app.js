@@ -40,12 +40,14 @@ const App = {
     } catch (e) {
       this.user = null;
       this.updateAuthUI();
+    this.attendanceUsers = await API.getUsersForAttendance();    
+
     }
   },
 
   updateAuthUI() {
     const isLoggedIn = !!this.user;
-    const isAdmin = this.user?.isAdmin;
+    const isAdmin = this.user?.isAdmin ?? false;
     document.body.classList.toggle('is-admin', isAdmin);
     document.getElementById('login-btn').classList.toggle('hidden', isLoggedIn);
     document.getElementById('logout-btn').classList.toggle('hidden', !isLoggedIn);
@@ -60,10 +62,10 @@ const App = {
   },
 
   async loadData() {
+    this.attendanceUsers = await API.getUsersForAttendance();    
     if (!this.user) return;
     try {
       this.users = await API.getUsers();
-      this.attendanceUsers = await API.getUsersForAttendance();
       this.renderUsers();
       this.renderLogs();
       this.renderTodayAttendance();
@@ -227,7 +229,7 @@ const App = {
   startDetection() {
     if (this.detectionInterval) clearInterval(this.detectionInterval);
     this.detectionInterval = setInterval(async () => {
-      if (!FaceAPI.modelsLoaded || this.cooldown || !this.user) return;
+      if (!FaceAPI.modelsLoaded || this.cooldown) return;
       try {
         const detections = await FaceAPI.detectFace(this.video);
         FaceAPI.clearCanvas(this.overlay);
