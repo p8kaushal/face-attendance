@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaceTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/dexie@4.0.8/dist/dexie.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <style>
+    /* Modern UI/UX Style Overrides and Fixes */
+    body {
+      background: radial-gradient(circle at top right, #111827, #030712);
+      color: #f3f4f6;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .modal-content {
+      max-height: 85vh !important;
+      overflow-y: auto !important;
+      border-radius: 12px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+      padding: 24px;
+    }
+
+    .form-group input, .form-group select {
+      background: #1f2937 !important;
+      border: 1px solid #374151 !important;
+      color: #f3f4f6 !important;
+      border-radius: 6px;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+      border-color: #3b82f6 !important;
+      outline: none;
+    }
+
+    .card {
+      background: rgba(31, 41, 55, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(5px);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Table Scroll Fixes */
+    .table-wrapper {
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    table th {
+      background: #1f2937;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    /* Dynamic stats look */
+    .stat-card {
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      transition: transform 0.2s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <nav class="navbar">
+      <a href="#" class="logo" onclick="App.navigateTo('attendance'); return false;">FaceTrack</a>
+      <button class="menu-toggle" aria-label="Menu" aria-controls="nav-links" aria-expanded="false">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="nav-links" id="nav-links">
+        <button class="nav-btn active" data-tab="attendance">Attendance</button>
+        <button class="nav-btn host-only hidden" data-tab="create-event">Create Event</button>
+        <button class="nav-btn host-only hidden" data-tab="manage-events">Manage Events</button>
+        <button class="nav-btn attendee-only hidden" data-tab="attendee-dashboard">Dashboard</button>
+        <button class="nav-btn admin-only" data-tab="register">Register User</button>
+        <button class="nav-btn admin-only" data-tab="users">Users</button>
+        <button class="nav-btn admin-only" data-tab="logs">History</button>
+      </div>
+      <div class="user-section">
+        <div id="user-info" class="hidden">
+          <img id="user-avatar" src="" alt="">
+          <span id="user-name"></span>
+          <span id="admin-badge" class="hidden">Admin</span>
+        </div>
+        <button id="login-btn" class="btn btn-primary"><span>Login</span></button>
+        <button id="logout-btn" class="btn btn-ghost hidden">Logout</button>
+      </div>
+    </nav>
+
+    <main class="main-content">
+      <!-- Attendance Tab -->
+      <section id="attendance" class="tab-content active">
+        <div class="camera-container">
+          <div class="video-wrapper">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+            <div class="status-badge" id="status-badge">Select event or scan QR code to start</div>
+          </div>
+          <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+            <button id="start-scanning-btn" class="btn btn-primary" style="padding: 10px 20px;">Start Camera</button>
+            <button id="stop-scanning-btn" class="btn btn-ghost hidden" style="padding: 10px 20px;">Stop Camera</button>
+          </div>
+        </div>
+        <div class="attendance-sidebar">
+          <!-- Event Selector Card -->
+          <div class="card" id="event-selector-card">
+            <h3>Event Context</h3>
+            <div class="form-group" style="margin-top: 10px;">
+              <select id="attendance-event-select" class="form-select">
+                <option value="">-- Select Event --</option>
+              </select>
+            </div>
+            
+            <div id="active-event-display" class="hidden" style="margin-top: 10px; padding: 10px; border-radius: 6px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); text-align: center;">
+              <span style="font-size: 11px; color: var(--text-secondary); display: block;">ACTIVE SELECTION</span>
+              <strong id="active-event-name" style="font-size: 14px; color: var(--primary);">None</strong>
+            </div>
+            
+            <!-- QR Verification tools -->
+            <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+              <button id="camera-qr-scan-btn" class="btn btn-ghost btn-sm" style="width:100%;">📷 Scan QR Code with Camera</button>
+              <div style="font-size: 11px; text-align: center; color: var(--text-secondary);">OR upload QR Code image file below:</div>
+              <input type="file" id="qr-file-input" accept="image/*" style="font-size: 12px; width: 100%;">
+            </div>
+
+            <!-- Event creator and location details -->
+            <div id="event-creator-details" class="hidden" style="margin-top: 15px; text-align: center; padding-top: 15px; border-top: 1px solid var(--border-color);">
+              <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 2px;">Event Creator</h4>
+              <img id="creator-host-avatar" src="" alt="Host Avatar" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); margin: 6px auto;">
+              <div id="creator-host-name" style="font-weight: 600; font-size: 14px; color: var(--text-primary);"></div>
+              
+              <h4 style="font-size: 13px; color: var(--text-secondary); margin-top: 12px; margin-bottom: 2px;">Event Bounds</h4>
+              <div id="event-location-display" style="font-size: 12px; color: var(--text-primary); font-family: monospace;"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Recognized User</h3>
+            <div id="detected-user" class="detected-user">
+              <span class="placeholder">Waiting for face...</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Today's Attendance</h3>
+            <div id="today-list" class="attendance-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Create Event Tab (Host/Admin) -->
+      <section id="create-event" class="tab-content">
+        <div style="max-width: 600px; margin: 0 auto;">
+          <div class="card">
+            <h3>Create Event</h3>
+            <form id="create-event-form" class="form" style="margin-top: 15px;">
+              <div class="form-group">
+                <label>Event Name</label>
+                <input type="text" id="event-name" required placeholder="Workshop/Lecture Name">
+              </div>
+              <div class="form-group">
+                <label>Radius (Meters)</label>
+                <input type="number" id="event-radius" required value="100" min="10">
+              </div>
+              <div class="form-group">
+                <label>Location Setting</label>
+                <select id="event-location-source" class="form-select">
+                  <option value="current">Use Current GPS Location</option>
+                  <option value="custom">Use Custom Coordinates</option>
+                </select>
+              </div>
+              <div id="custom-location-inputs" class="hidden">
+                <div class="form-group">
+                  <label>Latitude</label>
+                  <input type="number" id="event-lat" step="any" placeholder="e.g. 37.7749">
+                </div>
+                <div class="form-group">
+                  <label>Longitude</label>
+                  <input type="number" id="event-lon" step="any" placeholder="e.g. -122.4194">
+                </div>
+              </div>
+              <div class="form-group" style="margin-top: 15px;">
+                <label>Host Identity Scan (Verify Face)</label>
+                <div class="video-wrapper small" style="position: relative; height: 160px; border-radius: 6px; overflow: hidden; background: #000; margin-bottom: 10px;">
+                  <video id="host-scan-video" autoplay muted playsinline style="width:100%; height:100%; object-fit: cover;"></video>
+                  <canvas id="host-scan-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button type="button" id="host-scan-btn" class="btn btn-ghost">Scan Face</button>
+                  <button type="button" id="host-scan-retake" class="btn btn-ghost hidden">Retake</button>
+                </div>
+                <div id="host-scan-preview" class="hidden" style="margin-top: 10px;">
+                  <img id="host-scan-img" src="" alt="Face Scan Preview" style="width: 80px; height: 80px; border-radius: 6px; object-fit: cover;">
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;">Create Event</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Manage Events Tab (Host/Admin) -->
+      <section id="manage-events" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px;">
+          <div class="card">
+            <h3>My Created Events</h3>
+            <div id="host-events-list" style="margin-top: 15px; display: flex; flex-direction: column; gap: 12px;">
+              <span class="placeholder">No events created yet.</span>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div id="event-management-details" class="hidden">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="managed-event-title">Event Management</h3>
+                <button id="host-export-csv" class="btn btn-ghost btn-sm">Export Attendees (CSV)</button>
+              </div>
+              
+              <div id="event-qr-container" style="text-align: center; margin: 15px 0;">
+                <div id="qrcode" style="display: inline-block; padding: 10px; background: white; border-radius: 6px;"></div>
+                <div style="margin-top: 8px;">
+                  <button id="download-qr-btn" class="btn btn-ghost btn-sm">Download QR Code</button>
+                </div>
+              </div>
+              <h4 style="margin-top: 15px;">Checked-in Attendees</h4>
+              <div class="table-wrapper" style="margin-top: 10px;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>ID</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="event-attendees-tbody">
+                    <tr><td colspan="3" style="text-align:center; color: var(--text-secondary)">No check-ins yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div id="no-event-selected-placeholder" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+              Select an event from the list to manage and view details.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Attendee Dashboard Tab -->
+      <section id="attendee-dashboard" class="tab-content">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div class="card">
+            <h3>My Profile Details</h3>
+            <div id="attendee-profile-details" style="display: flex; align-items: center; gap: 15px; margin-top: 15px;">
+              <div id="attendee-profile-avatar" style="width: 80px; height: 80px; border-radius: 50%; background: var(--bg-hover); display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: var(--primary-color); overflow: hidden;"></div>
+              <div>
+                <h4 id="attendee-profile-name" style="margin: 0; font-size: 18px; color: var(--text-primary);">Name</h4>
+                <p id="attendee-profile-id" style="margin: 3px 0 0 0; color: var(--text-secondary); font-size: 14px;">User ID</p>
+                <p id="attendee-profile-role" style="margin: 3px 0 0 0; font-size: 12px; font-weight: 600; color: var(--primary-color);">Attendee</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 25px;">
+              <div class="stat-card" style="flex: 1; padding: 20px; background: var(--bg-hover); border-radius: 8px; text-align: center;">
+                <h4 style="font-size: 13px; color: var(--text-secondary)">Total Checks</h4>
+                <span id="attendee-total-checkins" style="font-size: 28px; font-weight: 700; color: var(--primary-color);">0</span>
+              </div>
+              <div class="stat-card" style="flex: 1; padding: 20px; background: var(--bg-hover); border-radius: 8px; text-align: center;">
+                <h4 style="font-size: 13px; color: var(--text-secondary)">Sync Queue</h4>
+                <span id="attendee-sync-status" style="font-size: 16px; font-weight: 600; color: #10b981;">Fully Synced</span>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>My Attendance Logs</h3>
+            <div class="table-wrapper" style="margin-top: 15px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                  </tr>
+                </thead>
+                <tbody id="attendee-logs-tbody">
+                  <tr><td colspan="3" style="text-align:center; color: var(--text-secondary)">No logs available.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Register User Tab (Admin only) -->
+      <section id="register" class="tab-content">
+        <div class="register-grid">
+          <div class="card">
+            <h3>Capture Face</h3>
+            <div class="video-wrapper small">
+              <video id="register-video" autoplay muted playsinline></video>
+              <canvas id="register-overlay"></canvas>
+            </div>
+            <div class="capture-actions">
+              <button id="capture-btn" class="btn btn-primary" disabled>Capture</button>
+              <button id="retake-btn" class="btn btn-ghost hidden">Retake</button>
+            </div>
+            <div id="capture-preview" class="capture-preview hidden">
+              <img id="captured-image" alt="Captured">
+            </div>
+          </div>
+          <div class="card">
+            <h3>User Details</h3>
+            <form id="register-form" class="form">
+              <div class="form-group">
+                <label>User/Employee ID</label>
+                <input type="text" id="employee-id" required placeholder="EMP001">
+              </div>
+              <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" id="employee-name" required placeholder="John Smith">
+              </div>
+              <div class="form-group">
+                <label>System Role</label>
+                <select id="employee-role" class="form-select">
+                  <option value="attendee">Attendee</option>
+                  <option value="host">Host</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Register User</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users Tab (Admin only) -->
+      <section id="users" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>Hosts</h3>
+            <span id="host-count" style="background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px;">0</span>
+          </div>
+          <div id="hosts-grid" class="users-grid" style="margin-top: 15px; margin-bottom: 30px;"></div>
+
+          <div class="card-header" style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+            <h3>Attendees</h3>
+            <span id="attendee-count" style="background: var(--primary-color); color: white; padding: 2px 8px; border-radius: 20px; font-size: 12px;">0</span>
+          </div>
+          <div id="attendees-grid" class="users-grid" style="margin-top: 15px;"></div>
+        </div>
+      </section>
+
+      <!-- History logs (Admin only) -->
+      <section id="logs" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h3>Attendance History</h3>
+            <div class="filters">
+              <input type="date" id="log-date">
+              <select id="log-user">
+                <option value="">All Users</option>
+              </select>
+              <button id="export-btn" class="btn btn-ghost">Export CSV</button>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Employee</th>
+                  <th>Event Name</th>
+                  <th>Check In</th>
+                  <th>Check Out</th>
+                  <th>Duration</th>
+                </tr>
+              </thead>
+              <tbody id="logs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <span id="loading-text">Loading...</span>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="login-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <div class="modal-tabs">
+          <button class="modal-tab active" data-form="login">Login</button>
+          <button class="modal-tab" data-form="register">Register</button>
+        </div>
+        <form id="local-login-form" class="auth-form">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="login-username" required placeholder="admin">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="login-password" required placeholder="••••••">
+          </div>
+          <button type="submit" class="btn btn-primary btn-full">Login</button>
+        </form>
+        <form id="local-register-form" class="auth-form hidden">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="register-username" required placeholder="username" minlength="3">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="register-password" required placeholder="••••••" minlength="6">
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="register-confirm" required placeholder="••••••">
+          </div>
+          <div class="form-group">
+            <label>User ID / Employee ID</label>
+            <input type="text" id="register-employee-id" required placeholder="EMP123">
+          </div>
+          <div class="form-group">
+            <label>Register As</label>
+            <select id="register-role" class="form-select">
+              <option value="attendee">Attendee</option>
+              <option value="host">Host</option>
+            </select>
+          </div>
+          
+          <!-- Registration Face Verification Scan -->
+          <div class="form-group" style="margin-top: 15px;">
+            <label>Scan Face (Required to register)</label>
+            <div class="video-wrapper small" style="position: relative; height: 160px; border-radius: 6px; overflow: hidden; background: #000; margin-bottom: 10px;">
+              <video id="register-modal-video" autoplay muted playsinline style="width:100%; height:100%; object-fit: cover;"></video>
+              <canvas id="register-modal-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></canvas>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" id="register-modal-scan-btn" class="btn btn-ghost">Start Face Scan</button>
+              <button type="button" id="register-modal-capture-btn" class="btn btn-primary hidden" disabled>Capture Face</button>
+            </div>
+            <div id="register-modal-preview" class="hidden" style="margin-top: 10px;">
+              <img id="register-modal-img" src="" alt="Face Scan Preview" style="width: 80px; height: 80px; border-radius: 6px; object-fit: cover;">
+            </div>
+          </div>
+          
+          <button type="submit" class="btn btn-primary btn-full" style="margin-top: 15px;">Create Account</button>
+        </form>
+        <div class="auth-divider"><span>or continue with</span></div>
+        <div class="social-login">
+          <button id="login-google" class="btn btn-social">
+            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Google
+          </button>
+          <button id="login-github" class="btn btn-social">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+            GitHub
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/face.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

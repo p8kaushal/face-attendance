@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS events (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  latitude DOUBLE PRECISION NOT NULL,
+  longitude DOUBLE PRECISION NOT NULL,
+  radius_meters DOUBLE PRECISION DEFAULT 100,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add event_id, latitude, longitude, and offline_uuid columns to attendance table
+ALTER TABLE attendance 
+ADD COLUMN IF NOT EXISTS event_id INTEGER REFERENCES events(id),
+ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS offline_uuid VARCHAR(255) UNIQUE;

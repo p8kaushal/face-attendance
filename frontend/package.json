@@ -1,0 +1,7 @@
+{
+  "name": "face-attendance-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npx serve . -p 3001"
+  }
+}
